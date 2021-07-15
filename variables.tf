@@ -1,7 +1,7 @@
 variable "aws_region" {
   type        = string
-  description = "AWS Region to deploy example API Gateway REST API"
-  default     = "us-west-2"
+  description = "AWS Region to deploy all resources"
+  default     = "us-east-1"
 }
 
 variable "default_tags" {
