@@ -11,6 +11,7 @@ module "lambda_function" {
   handler       = "index.lambda_handler"
   runtime       = "python3.8"
   publish       = true
+  timeout       = var.function_timeout
 
   source_path = "files/index.py"
 

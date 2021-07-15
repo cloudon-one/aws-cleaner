@@ -26,6 +26,12 @@ variable "function_description" {
   default     = "Lambda function to cleanup unneeded resources (unattached EBS volumes, unattached EIPs, etc.)"
 }
 
+variable "function_timeout" {
+  type        = number
+  description = "The amount of time your Lambda Function has to run in seconds"
+  default     = 60
+}
+
 variable "event_cron" {
   type        = string
   description = "Cron value for the EventBridge rule"
