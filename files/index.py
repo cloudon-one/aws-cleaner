@@ -3,7 +3,7 @@ import boto3
 import os
 
 keep_instances = ["sftp-bot"]
-keep_tag = os.environ['KEEP_TAG']
+keep_tag_key = os.environ['KEEP_TAG_KEY']
 dry_run = os.environ['DRY_RUN']
 
 USED_REGIONS = [
@@ -55,7 +55,7 @@ def stop_all_instances(regions):
                         instance_project = ""
                         if "Tags" in instance:
                             for tag in instance["Tags"]:
-                                if tag["Key"] == keep_tag:
+                                if tag["Key"] == keep_tag_key:
                                     keep_instances.append(instance_id)
                                 if tag["Key"] == "Name":
                                     instance_name = tag["Value"]
