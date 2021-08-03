@@ -18,6 +18,11 @@ module "lambda_function" {
   attach_policy = true
   policy        = "arn:aws:iam::aws:policy/AdministratorAccess"
 
+  environment_variables = {
+    CHECK_ALL_REGIONS = "false"
+    KEEP_TAG_KEY = "Keep"
+  }
+
   allowed_triggers = {
     NightlyRule = {
       principal  = "events.amazonaws.com"

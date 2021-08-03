@@ -1,8 +1,18 @@
 import json
 import boto3
+import os
 
 keep_instances = ["sftp-bot"]
-keep_tags = ["Keep"]
+keep_tag = os.environ['KEEP_TAG']
+
+USED_REGIONS = [
+    'us-east-1',
+    'us-east-2',
+    'us-west-1',
+    'us-west-2',
+    'eu-central-1',
+    'eu-west-1'
+]
 
 def get_aws_regions():
     """Get all AWS regions
@@ -44,7 +54,7 @@ def stop_all_instances(regions):
                         instance_project = ""
                         if "Tags" in instance:
                             for tag in instance["Tags"]:
-                                if tag["Key"] in keep_tags:
+                                if tag["Key"] == keep_tag:
                                     keep_instances.append(instance_id)
                                 if tag["Key"] == "Name":
                                     instance_name = tag["Value"]
@@ -135,7 +145,11 @@ def delete_available_ebs_volumes(regions):
                     print(f'[ERROR]: Failed to delete volume with ID: {volume_id}')
 
 def lambda_handler(event, context):
-    regions = get_aws_regions()
+    check_all_regions = os.environ['CHECK_ALL_REGIONS']
+    if check_all_regions == 'true':
+        regions = get_aws_regions()
+    elif check_all_regions == 'false':
+        regions = USED_REGIONS
 
     stop_all_instances(regions)
     unmonitor_all_instances(regions)
