@@ -32,14 +32,26 @@ variable "function_timeout" {
   default     = 60
 }
 
-variable "event_cron" {
-  type        = string
-  description = "Cron value for the EventBridge rule"
-  default     = "cron(0 20 * * ? *)"
-}
-
 variable "dry_run" {
   type        = bool
   description = "Whether to run the Lambda in dry-run mode"
   default     = false
+}
+
+variable "check_all_regions" {
+  type        = bool
+  description = "Whether to check for resources in all regions or just specific ones (default: false = specific)"
+  default     = false
+}
+
+variable "keep_tag_key" {
+  type        = string
+  description = "Key of the tag to configure as resoruces to keep"
+  default     = "Keep"
+}
+
+variable "event_cron" {
+  type        = string
+  description = "Cron value for the EventBridge rule"
+  default     = "cron(0 20 * * ? *)"
 }

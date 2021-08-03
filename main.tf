@@ -19,8 +19,8 @@ module "lambda_function" {
   policy        = "arn:aws:iam::aws:policy/AdministratorAccess"
 
   environment_variables = {
-    CHECK_ALL_REGIONS = "false"
-    KEEP_TAG_KEY      = "Keep"
+    CHECK_ALL_REGIONS = var.check_all_regions
+    KEEP_TAG_KEY      = var.keep_tag_key
     DRY_RUN           = var.dry_run
   }
 
