@@ -20,7 +20,8 @@ module "lambda_function" {
 
   environment_variables = {
     CHECK_ALL_REGIONS = "false"
-    KEEP_TAG_KEY = "Keep"
+    KEEP_TAG_KEY      = "Keep"
+    DRY_RUN           = var.dry_run
   }
 
   allowed_triggers = {

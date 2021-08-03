@@ -37,3 +37,9 @@ variable "event_cron" {
   description = "Cron value for the EventBridge rule"
   default     = "cron(0 20 * * ? *)"
 }
+
+variable "dry_run" {
+  type        = bool
+  description = "Whether to run the Lambda in dry-run mode"
+  default     = false
+}

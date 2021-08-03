@@ -4,6 +4,7 @@ import os
 
 keep_instances = ["sftp-bot"]
 keep_tag = os.environ['KEEP_TAG']
+dry_run = os.environ['DRY_RUN']
 
 USED_REGIONS = [
     'us-east-1',
@@ -67,7 +68,8 @@ def stop_all_instances(regions):
                             instances_to_stop.append(instance_id)
         
         if instances_to_stop:
-            ec2_specific_region.stop_instances(InstanceIds=instances_to_stop)
+            if dry_run == 'false':
+                ec2_specific_region.stop_instances(InstanceIds=instances_to_stop)
             print(f'[INFO]: Stopped instances: {str(instances_to_stop)}')
 
 def unmonitor_all_instances(regions):
@@ -96,7 +98,8 @@ def unmonitor_all_instances(regions):
                             instances_to_unmonitor.append(instance_id)
         
         if instances_to_unmonitor:
-            ec2_specific_region.unmonitor_instances(InstanceIds=instances_to_unmonitor)
+            if dry_run == 'false':
+                ec2_specific_region.unmonitor_instances(InstanceIds=instances_to_unmonitor)
             print(f'[INFO]: Unmonitored instances: {str(instances_to_unmonitor)}')
 
 def release_unassociated_eip(regions):
@@ -117,7 +120,8 @@ def release_unassociated_eip(regions):
             if not 'InstanceId' in address and not 'NetworkInterfaceId' in address:
                 try:
                     print(f'[INFO]: Releasing address with allocation ID: {allocation_id}')
-                    response = ec2_specific_region.release_address(AllocationId=allocation_id)
+                    if dry_run == 'false':
+                        response = ec2_specific_region.release_address(AllocationId=allocation_id)
                 except:
                     print(f'[ERROR]: Failed to release address with allocation ID: {allocation_id}')
                     
@@ -140,7 +144,8 @@ def delete_available_ebs_volumes(regions):
                 volume_id = volume['VolumeId']
                 try:
                     print(f'[INFO]: Deleting EBS volume with ID: {volume_id}')
-                    response = ec2_specific_region.delete_volume(VolumeId=volume_id)
+                    if dry_run == 'false':
+                        response = ec2_specific_region.delete_volume(VolumeId=volume_id)
                 except:
                     print(f'[ERROR]: Failed to delete volume with ID: {volume_id}')
 
