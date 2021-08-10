@@ -149,6 +149,30 @@ def delete_available_ebs_volumes(regions):
                 except:
                     print(f'[ERROR]: Failed to delete volume with ID: {volume_id}')
 
+def delete_empty_load_balancers(regions):
+    """Delete al empty (classic) load balancers
+
+    This will delete all empty (with no instances) classic load balancers
+    in all the regions in the input
+
+    :param regions: List of AWS region names
+    """
+
+    print("====== Classic Load Balancers ======")
+    for region in regions:
+        print(f'[INFO]: Getting all empty (with no instances) classic load balancers in region: {region}')
+        elb_specific_region = boto3.client('elb', region_name='{}'.format(region))
+        response = elb_specific_region.describe_load_balancers()
+        for lb in response['LoadBalancerDescriptions']:
+            if len(lb['Instances']) == 0:
+                lb_name = lb['LoadBalancerName']
+                try:
+                    print(f'[INFO]: Deleting classic load balancer: {lb_name}')
+                    if dry_run == 'false':
+                        response = elb_specific_region.delete_load_balancer(LoadBalancerName=lb_name)
+                except:
+                    print(f'[ERROR]: Failed to delete classic load balancer: {lb_name}')
+
 def lambda_handler(event, context):
     check_all_regions = os.environ['CHECK_ALL_REGIONS']
     if check_all_regions == 'true':
@@ -160,6 +184,7 @@ def lambda_handler(event, context):
     unmonitor_all_instances(regions)
     release_unassociated_eip(regions)
     delete_available_ebs_volumes(regions)
+    delete_empty_load_balancers(regions)
 
     return {
         'statusCode': 200,
