@@ -142,12 +142,29 @@ def delete_available_ebs_volumes(regions):
         for volume in response['Volumes']:
             if volume['State'] == 'available':
                 volume_id = volume['VolumeId']
-                try:
-                    print(f'[INFO]: Deleting EBS volume with ID: {volume_id}')
-                    if dry_run == 'false':
-                        response = ec2_specific_region.delete_volume(VolumeId=volume_id)
-                except:
-                    print(f'[ERROR]: Failed to delete volume with ID: {volume_id}')
+                delete_vol = True
+
+                # Check if the volume is connected to a running EKS cluster
+                tags = volume['Tags'] if 'Tags' in volume else []
+                for tag in tags:
+                    if tag['Key'].startswith('kubernetes.io/cluster'):
+                        eks_cluster_name = tag['Key'].split('/')[2]
+                        try:
+                            eks_specific_region = boto3.client('eks', region_name=region)
+                            response = eks_specific_region.describe_cluster(name=eks_cluster_name)
+                            delete_vol = False # Don't delete volume is it's connected to existing EKS cluster
+                        # Exception thrown if cluster with the name doesn't exist
+                        except eks_specific_region.exceptions.ResourceNotFoundException:
+                            delete_vol = True
+                        break
+
+                if delete_vol is True:
+                    try:
+                        print(f'[INFO]: Deleting EBS volume with ID: {volume_id}')
+                        if dry_run == 'false':
+                            response = ec2_specific_region.delete_volume(VolumeId=volume_id)
+                    except:
+                        print(f'[ERROR]: Failed to delete volume with ID: {volume_id}')
 
 def delete_empty_load_balancers(regions):
     """Delete al empty (classic) load balancers
