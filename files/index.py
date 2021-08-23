@@ -190,6 +190,64 @@ def delete_empty_load_balancers(regions):
                 except:
                     print(f'[ERROR]: Failed to delete classic load balancer: {lb_name}')
 
+def add_created_on_tag(regions):
+    """Add "CreatedOn" tag on resources
+
+    This will check the resource creation date against AWS Config
+    and add it as a tag to the resource
+
+    :param regions: List of AWS region names
+    """
+
+    for region in regions:
+        print(f'[INFO]: Getting instances in region: {region}')
+        ec2_specific_region = boto3.client('ec2', region_name=region)
+        config_specific_region = boto3.client('config', region_name=region)
+
+        # Check if there are discover resources in AWS Config
+        response = config_specific_region.get_discovered_resource_counts()
+        if response['totalDiscoveredResources'] == 0:
+            continue
+
+        response = ec2_specific_region.describe_instances()
+        if "Reservations" in response:
+            for reservation in response["Reservations"]:
+                if "Instances" in reservation:
+                    for instance in reservation["Instances"]:
+                        # Ignore spot instances
+                        if 'InstanceLifecycle' in instance and instance['InstanceLifecycle'] == 'spot':
+                            continue
+
+                        # Skip instance if tag already present
+                        found_tag = False
+                        if "Tags" in instance:
+                            for tag in instance["Tags"]:
+                                if tag["Key"] == "CreatedOn":
+                                    found_tag = True
+                                    break
+                        if found_tag:
+                            continue
+
+                        instance_id = instance["InstanceId"]
+                        response = config_specific_region.get_resource_config_history(
+                                        resourceType='AWS::EC2::Instance',
+                                        resourceId=instance_id)
+                        created_on = response['configurationItems'][0]['resourceCreationTime']
+                        created_on = created_on.strftime("%d/%m/%Y")
+                        print(f'[INFO] Instance {instance_id} created on {created_on}')
+
+                        # Create tag on instance
+                        if dry_run == 'false':
+                            ec2_specific_region.create_tags(
+                                Resources=[instance_id],
+                                Tags=[
+                                    {
+                                        'Key': 'CreatedOn',
+                                        'Value': created_on
+                                    },
+                                ]
+                            )
+
 def lambda_handler(event, context):
     check_all_regions = os.environ['CHECK_ALL_REGIONS']
     if check_all_regions == 'true':
@@ -198,6 +256,7 @@ def lambda_handler(event, context):
         regions = USED_REGIONS
 
     stop_all_instances(regions)
+    add_created_on_tag(regions)
     unmonitor_all_instances(regions)
     release_unassociated_eip(regions)
     delete_available_ebs_volumes(regions)
