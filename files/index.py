@@ -122,8 +122,8 @@ def release_unassociated_eip(regions):
                     print(f'[INFO]: Releasing address with allocation ID: {allocation_id}')
                     if dry_run == 'false':
                         response = ec2_specific_region.release_address(AllocationId=allocation_id)
-                except:
-                    print(f'[ERROR]: Failed to release address with allocation ID: {allocation_id}')
+                except Exception as e:
+                    print(f'[ERROR]: Failed to release address with allocation ID: {allocation_id}. Error: {e}')
                     
 def delete_available_ebs_volumes(regions):
     """Delete all available EBS volumes
@@ -163,11 +163,11 @@ def delete_available_ebs_volumes(regions):
                         print(f'[INFO]: Deleting EBS volume with ID: {volume_id}')
                         if dry_run == 'false':
                             response = ec2_specific_region.delete_volume(VolumeId=volume_id)
-                    except:
-                        print(f'[ERROR]: Failed to delete volume with ID: {volume_id}')
+                    except Exception as e:
+                        print(f'[ERROR]: Failed to delete volume with ID: {volume_id}. Error: {e}')
 
 def delete_empty_load_balancers(regions):
-    """Delete al empty (classic) load balancers
+    """Delete all empty (classic) load balancers
 
     This will delete all empty (with no instances) classic load balancers
     in all the regions in the input
@@ -187,8 +187,43 @@ def delete_empty_load_balancers(regions):
                     print(f'[INFO]: Deleting classic load balancer: {lb_name}')
                     if dry_run == 'false':
                         response = elb_specific_region.delete_load_balancer(LoadBalancerName=lb_name)
-                except:
-                    print(f'[ERROR]: Failed to delete classic load balancer: {lb_name}')
+                except Exception as e:
+                    print(f'[ERROR]: Failed to delete classic load balancer: {lb_name}. Error: {e}')
+
+def stop_rds(regions):
+    """Stops RDS clusters and instances
+
+    This will stop all RDS clusters and instances
+    in all the regions in the input
+
+    :param regions: List of AWS region names
+    """
+
+    print("====== RDS Clusters/Instances ======")
+    for region in regions:
+        print(f'[INFO]: Getting RDS clusters and instances in region: {region}')
+        rds_specific_region = boto3.client('rds', region_name='{}'.format(region))
+        response = rds_specific_region.describe_db_clusters()
+        for cluster in response['DBClusters']:
+            if cluster['Status'] == 'available':
+                cluster_id = cluster['DBClusterIdentifier']
+                try:
+                    print(f'[INFO]: Stopping DB cluster: {cluster_id}')
+                    if dry_run == 'false':
+                        response = rds_specific_region.stop_db_cluster(DBClusterIdentifier=cluster_id)
+                except Exception as e:
+                    print(f'[ERROR]: Failed to stop DB cluster: {cluster_id}. Error: {e}')
+
+        response = rds_specific_region.describe_db_instances()
+        for instance in response['DBInstances']:
+            if instance['DBInstanceStatus'] == 'available':
+                instance_id = instance['DBInstanceIdentifier']
+                try:
+                    print(f'[INFO]: Stopping DB instance: {instance_id}')
+                    if dry_run == 'false':
+                        response = rds_specific_region.stop_db_instance(DBInstanceIdentifier=instance_id)
+                except Exception as e:
+                    print(f'[ERROR]: Failed to stop DB instance: {instance_id}. Error: {e}')
 
 def add_created_on_tag(regions):
     """Add "CreatedOn" tag on resources
@@ -261,6 +296,7 @@ def lambda_handler(event, context):
     release_unassociated_eip(regions)
     delete_available_ebs_volumes(regions)
     delete_empty_load_balancers(regions)
+    stop_rds(regions)
 
     return {
         'statusCode': 200,
