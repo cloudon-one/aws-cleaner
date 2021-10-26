@@ -225,6 +225,38 @@ def stop_rds(regions):
                 except Exception as e:
                     print(f'[ERROR]: Failed to stop DB instance: {instance_id}. Error: {e}')
 
+def scale_in_eks_nodegroups(regions):
+    """Scales-in EKS nodegroups to 0
+
+    This will ensure all EKS node groups have 0 replicas
+    in all the regions in the input
+
+    :param regions: List of AWS region names
+    """
+
+    print("====== EKS node groups ======")
+    for region in regions:
+        print(f'[INFO]: Getting EKS clusters in region: {region}')
+        eks_specific_region = boto3.client('eks', region_name='{}'.format(region))
+        response_clusters = eks_specific_region.list_clusters()
+        for cluster in response_clusters['clusters']:
+            response_nodegroups = eks_specific_region.list_nodegroups(clusterName=cluster)
+            for ng in response_nodegroups['nodegroups']:
+                node_group_info = eks_specific_region.describe_nodegroup(clusterName=cluster, nodegroupName=ng)
+                scalingConfig = node_group_info['nodegroup']['scalingConfig']
+
+                # Update scaling
+                scalingConfig['minSize'] = 0
+                scalingConfig['desiredSize'] = 0
+
+                try:
+                    print(f'[INFO]: Updating scaling config for node group {ng} in cluster {cluster}')
+                    if dry_run == 'false':
+                        response = eks_specific_region.update_nodegroup_config(clusterName=cluster, nodegroupName=ng, scalingConfig=scalingConfig)
+                except Exception as e:
+                    print(f'[ERROR]: Failed to update scaling config for node group {ng} in cluster {cluster}. Error: {e}')
+
+
 def add_created_on_tag(regions):
     """Add "CreatedOn" tag on resources
 
@@ -297,6 +329,7 @@ def lambda_handler(event, context):
     delete_available_ebs_volumes(regions)
     delete_empty_load_balancers(regions)
     stop_rds(regions)
+    scale_in_eks_nodegroups(regions)
 
     return {
         'statusCode': 200,
