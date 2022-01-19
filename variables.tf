@@ -7,6 +7,7 @@ variable "aws_region" {
 variable "assume_role_arn" {
   description = "ARN of the IAM Role to assume in the member account"
   type        = string
+  default     = null
 }
 
 variable "default_tags" {
