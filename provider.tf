@@ -5,8 +5,11 @@ terraform {
 provider "aws" {
   region = var.aws_region
 
-  assume_role {
-    role_arn = var.assume_role_arn
+  dynamic "assume_role" {
+    for_each = var.assume_role_arn != null ? [var.assume_role_arn] : []
+    content {
+      role_arn = assume_role.value
+    }
   }
 
   default_tags {
