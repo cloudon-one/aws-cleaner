@@ -31,6 +31,7 @@ This repository contains a Terraform module that will deploy the relevant resour
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
+| <a name="input_assume_role_arn"></a> [assume\_role\_arn](#input\_assume\_role\_arn) | ARN of the IAM Role to assume in the member account | `string` | n/a | yes |
 | <a name="input_aws_region"></a> [aws\_region](#input\_aws\_region) | AWS Region to deploy all resources | `string` | `"us-east-1"` | no |
 | <a name="input_check_all_regions"></a> [check\_all\_regions](#input\_check\_all\_regions) | Whether to check for resources in all regions or just specific ones (default: false = specific) | `bool` | `false` | no |
 | <a name="input_default_tags"></a> [default\_tags](#input\_default\_tags) | Tags to apply across all resources handled by this provider | `map(string)` | <pre>{<br>  "Owner": "Daniel Vaknin",<br>  "Terraform": "True",<br>  "Terraform_Cloud": "True"<br>}</pre> | no |

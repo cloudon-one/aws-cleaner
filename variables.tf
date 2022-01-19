@@ -4,6 +4,11 @@ variable "aws_region" {
   default     = "us-east-1"
 }
 
+variable "assume_role_arn" {
+  description = "ARN of the IAM Role to assume in the member account"
+  type        = string
+}
+
 variable "default_tags" {
   type        = map(string)
   description = "Tags to apply across all resources handled by this provider"
