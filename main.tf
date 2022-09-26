@@ -4,12 +4,12 @@
 
 module "lambda_function" {
   source  = "terraform-aws-modules/lambda/aws"
-  version = "2.7.0"
+  version = "4.0.2"
 
   function_name = var.function_name
   description   = var.function_description
   handler       = "index.lambda_handler"
-  runtime       = "python3.8"
+  runtime       = "python3.9"
   publish       = true
   timeout       = var.function_timeout
 

@@ -14,9 +14,9 @@ variable "default_tags" {
   type        = map(string)
   description = "Tags to apply across all resources handled by this provider"
   default = {
-    Terraform       = "True"
-    Terraform_Cloud = "True"
-    Owner           = "Daniel Vaknin"
+    Terraform = "True"
+    #Terraform_Cloud = "True"
+    #Owner           = "Daniel Vaknin"
   }
 }
 

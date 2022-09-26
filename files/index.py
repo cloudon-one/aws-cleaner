@@ -1,4 +1,5 @@
 import json
+from urllib import response
 import boto3
 import os
 
@@ -15,6 +16,7 @@ USED_REGIONS = [
     'eu-west-1'
 ]
 
+
 def get_aws_regions():
     """Get all AWS regions
 
@@ -23,9 +25,11 @@ def get_aws_regions():
 
     print("[INFO]: Getting all available AWS regions")
     client = boto3.client('ec2')
-    regions = [region['RegionName'] for region in client.describe_regions()['Regions']]
-    
+    regions = [region['RegionName']
+               for region in client.describe_regions()['Regions']]
+
     return regions
+
 
 def stop_all_instances(regions):
     """Stop all EC2 instances
@@ -39,7 +43,8 @@ def stop_all_instances(regions):
     for region in regions:
         instances_to_stop = []
         print(f'[INFO]: Getting instances in region: {region}')
-        ec2_specific_region = boto3.client('ec2', region_name='{}'.format(region))
+        ec2_specific_region = boto3.client(
+            'ec2', region_name='{}'.format(region))
         response = ec2_specific_region.describe_instances()
         if "Reservations" in response:
             for reservation in response["Reservations"]:
@@ -64,13 +69,16 @@ def stop_all_instances(regions):
                                 if tag["Key"] == "Project":
                                     instance_project = tag["Value"]
                         if state == "running" and instance_name not in keep_instances and instance_id not in keep_instances:
-                            print(f'[INFO]: Instance with ID "{instance_id}" and name "{instance_name}" will be stopped.')
+                            print(
+                                f'[INFO]: Instance with ID "{instance_id}" and name "{instance_name}" will be stopped.')
                             instances_to_stop.append(instance_id)
-        
+
         if instances_to_stop:
             if dry_run == 'false':
-                ec2_specific_region.stop_instances(InstanceIds=instances_to_stop)
+                ec2_specific_region.stop_instances(
+                    InstanceIds=instances_to_stop)
             print(f'[INFO]: Stopped instances: {str(instances_to_stop)}')
+
 
 def unmonitor_all_instances(regions):
     """Stop detailed monitoring on all EC2 instances
@@ -85,7 +93,8 @@ def unmonitor_all_instances(regions):
     for region in regions:
         instances_to_unmonitor = []
         print(f'[INFO]: Getting instances in region: {region}')
-        ec2_specific_region = boto3.client('ec2', region_name='{}'.format(region))
+        ec2_specific_region = boto3.client(
+            'ec2', region_name='{}'.format(region))
         response = ec2_specific_region.describe_instances()
         if "Reservations" in response:
             for reservation in response["Reservations"]:
@@ -94,13 +103,17 @@ def unmonitor_all_instances(regions):
                         instance_id = instance["InstanceId"]
                         monitor_state = instance["Monitoring"]["State"]
                         if monitor_state == 'enabled':
-                            print(f'[INFO]: Instance with ID "{instance_id}" will be unmonitored.')
+                            print(
+                                f'[INFO]: Instance with ID "{instance_id}" will be unmonitored.')
                             instances_to_unmonitor.append(instance_id)
-        
+
         if instances_to_unmonitor:
             if dry_run == 'false':
-                ec2_specific_region.unmonitor_instances(InstanceIds=instances_to_unmonitor)
-            print(f'[INFO]: Unmonitored instances: {str(instances_to_unmonitor)}')
+                ec2_specific_region.unmonitor_instances(
+                    InstanceIds=instances_to_unmonitor)
+            print(
+                f'[INFO]: Unmonitored instances: {str(instances_to_unmonitor)}')
+
 
 def release_unassociated_eip(regions):
     """Release all unassociated Elastic IPs
@@ -112,19 +125,25 @@ def release_unassociated_eip(regions):
 
     print("====== Elastic IPs ======")
     for region in regions:
-        print(f'[INFO]: Getting all unassociated Elastic IPs in region: {region}')
-        ec2_specific_region = boto3.client('ec2', region_name='{}'.format(region))
+        print(
+            f'[INFO]: Getting all unassociated Elastic IPs in region: {region}')
+        ec2_specific_region = boto3.client(
+            'ec2', region_name='{}'.format(region))
         response = ec2_specific_region.describe_addresses(AllocationIds=[])
         for address in response['Addresses']:
             allocation_id = address['AllocationId']
             if not 'InstanceId' in address and not 'NetworkInterfaceId' in address:
                 try:
-                    print(f'[INFO]: Releasing address with allocation ID: {allocation_id}')
+                    print(
+                        f'[INFO]: Releasing address with allocation ID: {allocation_id}')
                     if dry_run == 'false':
-                        response = ec2_specific_region.release_address(AllocationId=allocation_id)
+                        response = ec2_specific_region.release_address(
+                            AllocationId=allocation_id)
                 except Exception as e:
-                    print(f'[ERROR]: Failed to release address with allocation ID: {allocation_id}. Error: {e}')
-                    
+                    print(
+                        f'[ERROR]: Failed to release address with allocation ID: {allocation_id}. Error: {e}')
+
+
 def delete_available_ebs_volumes(regions):
     """Delete all available EBS volumes
 
@@ -136,8 +155,10 @@ def delete_available_ebs_volumes(regions):
 
     print("====== EBS Volumes ======")
     for region in regions:
-        print(f'[INFO]: Getting all available (unused) EBS volumes in region: {region}')
-        ec2_specific_region = boto3.client('ec2', region_name='{}'.format(region))
+        print(
+            f'[INFO]: Getting all available (unused) EBS volumes in region: {region}')
+        ec2_specific_region = boto3.client(
+            'ec2', region_name='{}'.format(region))
         response = ec2_specific_region.describe_volumes()
         for volume in response['Volumes']:
             if volume['State'] == 'available':
@@ -150,9 +171,11 @@ def delete_available_ebs_volumes(regions):
                     if tag['Key'].startswith('kubernetes.io/cluster'):
                         eks_cluster_name = tag['Key'].split('/')[2]
                         try:
-                            eks_specific_region = boto3.client('eks', region_name=region)
-                            response = eks_specific_region.describe_cluster(name=eks_cluster_name)
-                            delete_vol = False # Don't delete volume is it's connected to existing EKS cluster
+                            eks_specific_region = boto3.client(
+                                'eks', region_name=region)
+                            response = eks_specific_region.describe_cluster(
+                                name=eks_cluster_name)
+                            delete_vol = False  # Don't delete volume is it's connected to existing EKS cluster
                         # Exception thrown if cluster with the name doesn't exist
                         except eks_specific_region.exceptions.ResourceNotFoundException:
                             delete_vol = True
@@ -160,11 +183,15 @@ def delete_available_ebs_volumes(regions):
 
                 if delete_vol is True:
                     try:
-                        print(f'[INFO]: Deleting EBS volume with ID: {volume_id}')
+                        print(
+                            f'[INFO]: Deleting EBS volume with ID: {volume_id}')
                         if dry_run == 'false':
-                            response = ec2_specific_region.delete_volume(VolumeId=volume_id)
+                            response = ec2_specific_region.delete_volume(
+                                VolumeId=volume_id)
                     except Exception as e:
-                        print(f'[ERROR]: Failed to delete volume with ID: {volume_id}. Error: {e}')
+                        print(
+                            f'[ERROR]: Failed to delete volume with ID: {volume_id}. Error: {e}')
+
 
 def delete_empty_load_balancers(regions):
     """Delete all empty (classic) load balancers
@@ -177,8 +204,10 @@ def delete_empty_load_balancers(regions):
 
     print("====== Classic Load Balancers ======")
     for region in regions:
-        print(f'[INFO]: Getting all empty (with no instances) classic load balancers in region: {region}')
-        elb_specific_region = boto3.client('elb', region_name='{}'.format(region))
+        print(
+            f'[INFO]: Getting all empty (with no instances) classic load balancers in region: {region}')
+        elb_specific_region = boto3.client(
+            'elb', region_name='{}'.format(region))
         response = elb_specific_region.describe_load_balancers()
         for lb in response['LoadBalancerDescriptions']:
             if len(lb['Instances']) == 0:
@@ -186,9 +215,12 @@ def delete_empty_load_balancers(regions):
                 try:
                     print(f'[INFO]: Deleting classic load balancer: {lb_name}')
                     if dry_run == 'false':
-                        response = elb_specific_region.delete_load_balancer(LoadBalancerName=lb_name)
+                        response = elb_specific_region.delete_load_balancer(
+                            LoadBalancerName=lb_name)
                 except Exception as e:
-                    print(f'[ERROR]: Failed to delete classic load balancer: {lb_name}. Error: {e}')
+                    print(
+                        f'[ERROR]: Failed to delete classic load balancer: {lb_name}. Error: {e}')
+
 
 def stop_rds(regions):
     """Stops RDS clusters and instances
@@ -201,8 +233,10 @@ def stop_rds(regions):
 
     print("====== RDS Clusters/Instances ======")
     for region in regions:
-        print(f'[INFO]: Getting RDS clusters and instances in region: {region}')
-        rds_specific_region = boto3.client('rds', region_name='{}'.format(region))
+        print(
+            f'[INFO]: Getting RDS clusters and instances in region: {region}')
+        rds_specific_region = boto3.client(
+            'rds', region_name='{}'.format(region))
         response = rds_specific_region.describe_db_clusters()
         for cluster in response['DBClusters']:
             if cluster['Status'] == 'available':
@@ -210,9 +244,11 @@ def stop_rds(regions):
                 try:
                     print(f'[INFO]: Stopping DB cluster: {cluster_id}')
                     if dry_run == 'false':
-                        response = rds_specific_region.stop_db_cluster(DBClusterIdentifier=cluster_id)
+                        response = rds_specific_region.stop_db_cluster(
+                            DBClusterIdentifier=cluster_id)
                 except Exception as e:
-                    print(f'[ERROR]: Failed to stop DB cluster: {cluster_id}. Error: {e}')
+                    print(
+                        f'[ERROR]: Failed to stop DB cluster: {cluster_id}. Error: {e}')
 
         response = rds_specific_region.describe_db_instances()
         for instance in response['DBInstances']:
@@ -221,9 +257,12 @@ def stop_rds(regions):
                 try:
                     print(f'[INFO]: Stopping DB instance: {instance_id}')
                     if dry_run == 'false':
-                        response = rds_specific_region.stop_db_instance(DBInstanceIdentifier=instance_id)
+                        response = rds_specific_region.stop_db_instance(
+                            DBInstanceIdentifier=instance_id)
                 except Exception as e:
-                    print(f'[ERROR]: Failed to stop DB instance: {instance_id}. Error: {e}')
+                    print(
+                        f'[ERROR]: Failed to stop DB instance: {instance_id}. Error: {e}')
+
 
 def scale_in_eks_nodegroups(regions):
     """Scales-in EKS nodegroups to 0
@@ -237,12 +276,15 @@ def scale_in_eks_nodegroups(regions):
     print("====== EKS node groups ======")
     for region in regions:
         print(f'[INFO]: Getting EKS clusters in region: {region}')
-        eks_specific_region = boto3.client('eks', region_name='{}'.format(region))
+        eks_specific_region = boto3.client(
+            'eks', region_name='{}'.format(region))
         response_clusters = eks_specific_region.list_clusters()
         for cluster in response_clusters['clusters']:
-            response_nodegroups = eks_specific_region.list_nodegroups(clusterName=cluster)
+            response_nodegroups = eks_specific_region.list_nodegroups(
+                clusterName=cluster)
             for ng in response_nodegroups['nodegroups']:
-                node_group_info = eks_specific_region.describe_nodegroup(clusterName=cluster, nodegroupName=ng)
+                node_group_info = eks_specific_region.describe_nodegroup(
+                    clusterName=cluster, nodegroupName=ng)
                 scalingConfig = node_group_info['nodegroup']['scalingConfig']
 
                 # Update scaling
@@ -250,11 +292,14 @@ def scale_in_eks_nodegroups(regions):
                 scalingConfig['desiredSize'] = 0
 
                 try:
-                    print(f'[INFO]: Updating scaling config for node group {ng} in cluster {cluster}')
+                    print(
+                        f'[INFO]: Updating scaling config for node group {ng} in cluster {cluster}')
                     if dry_run == 'false':
-                        response = eks_specific_region.update_nodegroup_config(clusterName=cluster, nodegroupName=ng, scalingConfig=scalingConfig)
+                        response = eks_specific_region.update_nodegroup_config(
+                            clusterName=cluster, nodegroupName=ng, scalingConfig=scalingConfig)
                 except Exception as e:
-                    print(f'[ERROR]: Failed to update scaling config for node group {ng} in cluster {cluster}. Error: {e}')
+                    print(
+                        f'[ERROR]: Failed to update scaling config for node group {ng} in cluster {cluster}. Error: {e}')
 
 
 def add_created_on_tag(regions):
@@ -297,11 +342,12 @@ def add_created_on_tag(regions):
 
                         instance_id = instance["InstanceId"]
                         response = config_specific_region.get_resource_config_history(
-                                        resourceType='AWS::EC2::Instance',
-                                        resourceId=instance_id)
+                            resourceType='AWS::EC2::Instance',
+                            resourceId=instance_id)
                         created_on = response['configurationItems'][0]['resourceCreationTime']
                         created_on = created_on.strftime("%d/%m/%Y")
-                        print(f'[INFO] Instance {instance_id} created on {created_on}')
+                        print(
+                            f'[INFO] Instance {instance_id} created on {created_on}')
 
                         # Create tag on instance
                         if dry_run == 'false':
@@ -314,6 +360,27 @@ def add_created_on_tag(regions):
                                     },
                                 ]
                             )
+
+
+def s3_cleanup():
+    client = boto3.client('s3')
+    response = client.list_buckets()
+    bucket_name = str(input('Please input bucket name to be deleted: '))
+
+    for bucket in response['Buckets']:
+        print(bucket['Name'])
+
+        print("Before deleting the bucket we need to check if its empty. Cheking ...")
+
+    objects = client.list_objects_v2(Bucket=bucket_name)
+    fileCount = objects['KeyCount']
+    if fileCount == 0:
+        response = client.delete_bucket(Bucket=bucket_name)
+        print("{} has been deleted successfully !!!".format(bucket_name))
+    else:
+        print("{} is not empty {} objects present".format(bucket_name, fileCount))
+        print("Please make sure S3 bucket is empty before deleting it !!!")
+
 
 def lambda_handler(event, context):
     check_all_regions = os.environ['CHECK_ALL_REGIONS']
