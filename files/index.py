@@ -397,6 +397,7 @@ def lambda_handler(event, context):
     delete_empty_load_balancers(regions)
     stop_rds(regions)
     scale_in_eks_nodegroups(regions)
+    s3_cleanup()
 
     return {
         'statusCode': 200,
