@@ -51,13 +51,24 @@ variable "check_all_regions" {
 }
 
 variable "keep_tag_key" {
-  type        = string
+  type        = map(string)
   description = "Key of the tag to configure as resoruces to keep"
-  default     = "Keep"
+  default = {
+    auto-deletion = "skip-resource",
+    auto-deletion = "stop-resource"
+  }
+}
+
+variable "ignore" {
+  type        = map(string)
+  description = "Key of the tag to configure as resoruces to skip"
+  default = {
+    spotinst = "*",
+  }
 }
 
 variable "event_cron" {
   type        = string
   description = "Cron value for the EventBridge rule"
-  default     = "cron(0 20 * * ? *)"
+  default     = "cron(0 21 * * ? *)"
 }

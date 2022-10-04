@@ -3,7 +3,7 @@ from urllib import response
 import boto3
 import os
 
-keep_instances = ["sftp-bot"]
+keep_instances = ['IGNORE']
 keep_tag_key = os.environ['KEEP_TAG_KEY']
 dry_run = os.environ['DRY_RUN']
 
@@ -362,24 +362,24 @@ def add_created_on_tag(regions):
                             )
 
 
-def s3_cleanup():
-    client = boto3.client('s3')
-    response = client.list_buckets()
-    bucket_name = str(input('Please input bucket name to be deleted: '))
-
-    for bucket in response['Buckets']:
-        print(bucket['Name'])
-
-        print("Before deleting the bucket we need to check if its empty. Cheking ...")
-
-    objects = client.list_objects_v2(Bucket=bucket_name)
-    fileCount = objects['KeyCount']
-    if fileCount == 0:
-        response = client.delete_bucket(Bucket=bucket_name)
-        print("{} has been deleted successfully !!!".format(bucket_name))
-    else:
-        print("{} is not empty {} objects present".format(bucket_name, fileCount))
-        print("Please make sure S3 bucket is empty before deleting it !!!")
+# def s3_cleanup():
+#    client = boto3.client('s3')
+#    response = client.list_buckets()
+#    bucket_name = str(input('Please input bucket name to be deleted: '))
+#
+#    for bucket in response['Buckets']:
+#        print(bucket['Name'])#
+#
+#        print("Before deleting the bucket we need to check if its empty. Cheking ...")
+#
+#    objects = client.list_objects_v2(Bucket=bucket_name)
+#    fileCount = objects['KeyCount']
+#    if fileCount == 0:
+#        response = client.delete_bucket(Bucket=bucket_name)
+#        print("{} has been deleted successfully !!!".format(bucket_name))
+#    else:
+#        print("{} is not empty {} objects present".format(bucket_name, fileCount))
+#        print("Please make sure S3 bucket is empty before deleting it !!!")
 
 
 def lambda_handler(event, context):
@@ -397,7 +397,7 @@ def lambda_handler(event, context):
     delete_empty_load_balancers(regions)
     stop_rds(regions)
     scale_in_eks_nodegroups(regions)
-    s3_cleanup()
+#   s3_cleanup()
 
     return {
         'statusCode': 200,
