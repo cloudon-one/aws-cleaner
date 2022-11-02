@@ -339,13 +339,41 @@ def delete_mks_clusters(regions):
         )
         for msk_cluster in response['ClusterArn']:
             try:
-                print(f'[INFO]: Deleting MSK cluster: {msk_cluster}')
-                delete_cluster = boto3.client.delete_cluster(
+                print(f'[INFO]: Deleting MSK cluster: {msk_cluster}'),
+                delete_cluster = response.client.delete_cluster(
                     ClusterArn=msk_cluster.ClusterArn
                 )
             except Exception as e:
                 print(
                     f'[ERROR]: Failed to delete MSK cluster: {msk_cluster}. Error: {e}')
+
+# Delete OpenSearch  domains
+
+
+def delete_domain(regions):
+    """Delete OpenSearch domains
+
+
+    :param regions: List of AWS region names
+    """
+
+    print("====== OpenSearch domains ======")
+    for region in regions:
+        print(
+            f'[INFO]: Getting all OpenSearch domains in the region: {region}')
+        response = boto3.client.list_domain_names(
+            EngineType='OpenSearch' | 'Elasticsearch'
+        )
+        for DomainName in response['DomainNames']:
+            try:
+                print(f'[INFO]: Deleting OpenSearch domains: {DomainName}'),
+                delete_domain = response.client.delete_domain(
+                    DomainName='DomainNames'
+                )
+            except Exception as e:
+                print(
+                    f'[ERROR]: Failed to delete OpenSearch domains: {DomainName}. Error: {e}')
+
 
 # Delete CreatedOn tag
 
