@@ -2,6 +2,7 @@ import json
 from urllib import response
 import boto3
 import os
+from aws_lambda_powertools import Logger
 
 keep_instances = ['IGNORE']
 keep_tag_key = os.environ['KEEP_TAG_KEY']
@@ -30,6 +31,8 @@ def get_aws_regions():
 
     return regions
 
+# Delete EC2 instances
+
 
 def stop_all_instances(regions):
     """Stop all EC2 instances
@@ -56,17 +59,17 @@ def stop_all_instances(regions):
                         instance_id = instance["InstanceId"]
                         state = instance["State"]["Name"]
                         instance_name = ""
-                        instance_owner = ""
-                        instance_project = ""
+                        #instance_owner = ""
+                        #instance_project = ""
                         if "Tags" in instance:
                             for tag in instance["Tags"]:
                                 if tag["Key"] == keep_tag_key:
                                     keep_instances.append(instance_id)
-                                if tag["Key"] == "Name":
+                                if tag["auto-deletion"] == "skip-resource":
                                     instance_name = tag["Value"]
-                                if tag["Key"] == "Owner":
-                                    instance_owner = tag["Value"]
-                                if tag["Key"] == "Project":
+                                if tag["auto-deletion"] == "skip-notify":
+                                    # if tag["auto-deletion"] == "stop-resource":
+
                                     instance_project = tag["Value"]
                         if state == "running" and instance_name not in keep_instances and instance_id not in keep_instances:
                             print(
@@ -78,6 +81,8 @@ def stop_all_instances(regions):
                 ec2_specific_region.stop_instances(
                     InstanceIds=instances_to_stop)
             print(f'[INFO]: Stopped instances: {str(instances_to_stop)}')
+
+# Unmonitor EC2 instances
 
 
 def unmonitor_all_instances(regions):
@@ -114,6 +119,8 @@ def unmonitor_all_instances(regions):
             print(
                 f'[INFO]: Unmonitored instances: {str(instances_to_unmonitor)}')
 
+# Delete EIP's
+
 
 def release_unassociated_eip(regions):
     """Release all unassociated Elastic IPs
@@ -142,6 +149,8 @@ def release_unassociated_eip(regions):
                 except Exception as e:
                     print(
                         f'[ERROR]: Failed to release address with allocation ID: {allocation_id}. Error: {e}')
+
+# Delete EBS volumes
 
 
 def delete_available_ebs_volumes(regions):
@@ -192,6 +201,8 @@ def delete_available_ebs_volumes(regions):
                         print(
                             f'[ERROR]: Failed to delete volume with ID: {volume_id}. Error: {e}')
 
+# Delete empty load balancers
+
 
 def delete_empty_load_balancers(regions):
     """Delete all empty (classic) load balancers
@@ -220,6 +231,8 @@ def delete_empty_load_balancers(regions):
                 except Exception as e:
                     print(
                         f'[ERROR]: Failed to delete classic load balancer: {lb_name}. Error: {e}')
+
+# Stop RDS instances
 
 
 def stop_rds(regions):
@@ -263,6 +276,8 @@ def stop_rds(regions):
                     print(
                         f'[ERROR]: Failed to stop DB instance: {instance_id}. Error: {e}')
 
+# Delete EKS nodegroups
+
 
 def scale_in_eks_nodegroups(regions):
     """Scales-in EKS nodegroups to 0
@@ -300,6 +315,39 @@ def scale_in_eks_nodegroups(regions):
                 except Exception as e:
                     print(
                         f'[ERROR]: Failed to update scaling config for node group {ng} in cluster {cluster}. Error: {e}')
+
+# Delete MSK streams
+
+
+def delete_mks_clusters(regions):
+    """Delete MSK clusters
+
+
+    :param regions: List of AWS region names
+    """
+
+    print("====== MSK clusters ======")
+    for region in regions:
+        print(
+            f'[INFO]: Getting all MSK clusters in the region: {region}')
+        msk_cluster = boto3.client(
+            'msk_cluster', region_name='{}'.format(region))
+        response = boto3.client.list_clusters(
+            ClusterNameFilter='*',
+            MaxResults=100,
+            NextToken='string'
+        )
+        for msk_cluster in response['ClusterArn']:
+            try:
+                print(f'[INFO]: Deleting MSK cluster: {msk_cluster}')
+                delete_cluster = boto3.client.delete_cluster(
+                    ClusterArn=msk_cluster.ClusterArn
+                )
+            except Exception as e:
+                print(
+                    f'[ERROR]: Failed to delete MSK cluster: {msk_cluster}. Error: {e}')
+
+# Delete CreatedOn tag
 
 
 def add_created_on_tag(regions):
@@ -362,26 +410,6 @@ def add_created_on_tag(regions):
                             )
 
 
-# def s3_cleanup():
-#    client = boto3.client('s3')
-#    response = client.list_buckets()
-#    bucket_name = str(input('Please input bucket name to be deleted: '))
-#
-#    for bucket in response['Buckets']:
-#        print(bucket['Name'])#
-#
-#        print("Before deleting the bucket we need to check if its empty. Cheking ...")
-#
-#    objects = client.list_objects_v2(Bucket=bucket_name)
-#    fileCount = objects['KeyCount']
-#    if fileCount == 0:
-#        response = client.delete_bucket(Bucket=bucket_name)
-#        print("{} has been deleted successfully !!!".format(bucket_name))
-#    else:
-#        print("{} is not empty {} objects present".format(bucket_name, fileCount))
-#        print("Please make sure S3 bucket is empty before deleting it !!!")
-
-
 def lambda_handler(event, context):
     check_all_regions = os.environ['CHECK_ALL_REGIONS']
     if check_all_regions == 'true':
@@ -397,7 +425,7 @@ def lambda_handler(event, context):
     delete_empty_load_balancers(regions)
     stop_rds(regions)
     scale_in_eks_nodegroups(regions)
-#   s3_cleanup()
+    delete_mks_clusters(regions)
 
     return {
         'statusCode': 200,

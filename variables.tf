@@ -55,7 +55,6 @@ variable "keep_tag_key" {
   description = "Key of the tag to configure as resoruces to keep"
   default = {
     auto-deletion = "skip-resource",
-    auto-deletion = "stop-resource"
   }
 }
 
@@ -70,5 +69,5 @@ variable "ignore" {
 variable "event_cron" {
   type        = string
   description = "Cron value for the EventBridge rule"
-  default     = "cron(0 21 * * ? *)"
+  default     = "cron(0 23 * * * *)"
 }
