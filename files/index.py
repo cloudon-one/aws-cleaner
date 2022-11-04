@@ -340,7 +340,7 @@ def delete_mks_clusters(regions):
         for msk_cluster in response['ClusterArn']:
             try:
                 print(f'[INFO]: Deleting MSK cluster: {msk_cluster}'),
-                delete_cluster = response.client.delete_cluster(
+                delete_cluster = response.client.delete_cluster(  # debug
                     ClusterArn=msk_cluster.ClusterArn
                 )
             except Exception as e:
@@ -367,7 +367,7 @@ def delete_domain(regions):
         for DomainName in response['DomainNames']:
             try:
                 print(f'[INFO]: Deleting OpenSearch domains: {DomainName}'),
-                delete_domain = response.client.delete_domain(
+                delete_domain = response.client.delete_domain(  # debug
                     DomainName='DomainNames'
                 )
             except Exception as e:
