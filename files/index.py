@@ -330,19 +330,20 @@ def delete_mks_clusters(regions):
     for region in regions:
         print(
             f'[INFO]: Getting all MSK clusters in the region: {region}')
-        msk_cluster = boto3.client(
-            'msk_cluster', region_name='{}'.format(region))
-        response = boto3.client.list_clusters(
+        kafka_client = boto3.client(
+            'kafka', region_name='{}'.format(region))
+        response = kafka_client.list_clusters(
             ClusterNameFilter='*',
             MaxResults=100,
             NextToken='string'
         )
-        for msk_cluster in response['ClusterArn']:
+        for msk_cluster in response['ClusterInfoList']:
             try:
                 print(f'[INFO]: Deleting MSK cluster: {msk_cluster}'),
-                delete_cluster = response.client.delete_cluster(  # debug
-                    ClusterArn=msk_cluster.ClusterArn
+                del_response = kafka_client.delete_cluster(  # debug # check if deletion by version is req
+                    ClusterArn=msk_cluster['ClusterArn']
                 )
+                print(f"response from kafka deletion: {del_response}")
             except Exception as e:
                 print(
                     f'[ERROR]: Failed to delete MSK cluster: {msk_cluster}. Error: {e}')
@@ -361,18 +362,20 @@ def delete_domain(regions):
     for region in regions:
         print(
             f'[INFO]: Getting all OpenSearch domains in the region: {region}')
-        response = boto3.client.list_domain_names(
-            EngineType='OpenSearch' | 'Elasticsearch'
+        domain_client = boto3.client('opensearch')
+        response = domain_client.list_domain_names(
+            EngineType='OpenSearch'
         )
-        for DomainName in response['DomainNames']:
+        for domain_name in response['DomainNames']:
             try:
-                print(f'[INFO]: Deleting OpenSearch domains: {DomainName}'),
-                delete_domain = response.client.delete_domain(  # debug
-                    DomainName='DomainNames'
+                print(f'[INFO]: Deleting OpenSearch domains: {domain_name}'),
+                delete_response = response.client.delete_domain(  # debug
+                    DomainName=domain_name['DomainName']
                 )
+                print(f"response from domain deletion: {delete_response}")
             except Exception as e:
                 print(
-                    f'[ERROR]: Failed to delete OpenSearch domains: {DomainName}. Error: {e}')
+                    f'[ERROR]: Failed to delete OpenSearch domains: {domain_name}. Error: {e}')
 
 
 # Delete CreatedOn tag
