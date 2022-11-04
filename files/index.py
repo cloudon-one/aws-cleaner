@@ -316,7 +316,7 @@ def scale_in_eks_nodegroups(regions):
                     print(
                         f'[ERROR]: Failed to update scaling config for node group {ng} in cluster {cluster}. Error: {e}')
 
-# Delete MSK streams
+# Delete MSK streams - NEW
 
 
 def delete_mks_clusters(regions):
@@ -347,7 +347,7 @@ def delete_mks_clusters(regions):
                 print(
                     f'[ERROR]: Failed to delete MSK cluster: {msk_cluster}. Error: {e}')
 
-# Delete OpenSearch  domains
+# Delete OpenSearch  domains - NEW
 
 
 def delete_domain(regions):
@@ -454,6 +454,7 @@ def lambda_handler(event, context):
     stop_rds(regions)
     scale_in_eks_nodegroups(regions)
     delete_mks_clusters(regions)
+    delete_domain(regions)
 
     return {
         'statusCode': 200,
