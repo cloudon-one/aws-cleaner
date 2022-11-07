@@ -1,8 +1,8 @@
 import json
-from urllib import response
+# from urllib import response
 import boto3
 import os
-from aws_lambda_powertools import Logger
+# from aws_lambda_powertools import Logger
 
 keep_instances = ['IGNORE']
 keep_tag_key = os.environ['KEEP_TAG_KEY']
@@ -91,10 +91,10 @@ def stop_all_instances(regions):
                             for tag in instance["Tags"]:
                                 if tag["Key"] == keep_tag_key:
                                     keep_instances.append(instance_id)
-                                if tag["auto-deletion"] == "skip-resource":
+                                if tag.get("auto-deletion") == "skip-resource":
                                     instance_name = tag["Value"]
-                                if tag["auto-deletion"] == "skip-notify":
-                                    # if tag["auto-deletion"] == "stop-resource":
+                                if tag.get("auto-deletion")  == "skip-notify":
+                                    # if tag.get("auto-deletion")  == "stop-resource":
 
                                     instance_project = tag["Value"]
                         if state == "running" and instance_name not in keep_instances and instance_id not in keep_instances:

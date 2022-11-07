@@ -35,7 +35,7 @@ variable "function_description" {
 variable "function_timeout" {
   type        = number
   description = "The amount of time your Lambda Function has to run in seconds"
-  default     = 60
+  default     = 60 #TODO change to handle all operations
 }
 
 variable "dry_run" {
@@ -54,7 +54,7 @@ variable "keep_tag_key" {
   type        = map(string)
   description = "Key of the tag to configure as resoruces to keep"
   default = {
-    auto-deletion = "skip-resource",
+      "auto-deletion" = "skip-resource"
   }
 }
 
@@ -69,5 +69,5 @@ variable "ignore" {
 variable "event_cron" {
   type        = string
   description = "Cron value for the EventBridge rule"
-  default     = "cron(0 23 * * * *)"
+  default     = "cron(0 23 * * ? *)"
 }

@@ -20,7 +20,7 @@ module "lambda_function" {
 
   environment_variables = {
     CHECK_ALL_REGIONS = var.check_all_regions
-    KEEP_TAG_KEY      = var.keep_tag_key
+    KEEP_TAG_KEY      = var.keep_tag_key["auto-deletion"]
     DRY_RUN           = var.dry_run
   }
 
