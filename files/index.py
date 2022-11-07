@@ -17,6 +17,9 @@ USED_REGIONS = [
     'eu-west-1'
 ]
 
+deleted_resources = []
+notify_resources = []
+check_resources = []
 
 def get_aws_regions():
     """Get all AWS regions
@@ -30,6 +33,29 @@ def get_aws_regions():
                for region in client.describe_regions()['Regions']]
 
     return regions
+
+def log_deleted_resources(response, service, resource_id):
+    if response.get("ResponseMetadata"):
+        status_code = response["ResponseMetadata"]["HTTPStatusCode"]
+        if status_code == 200:
+            deleted_resources.append((service, resource_id))
+        else:
+            check_resources.append((service, resource_id))
+
+    if response.get("DomainStatus"):
+        deleted = response["DomainStatus"]["Deleted"]
+        if deleted:
+            deleted_resources.append((service, resource_id))
+        else:
+            check_resources.append((service, resource_id))
+
+
+
+
+def print_mail_data():
+    print("deleted_resources",deleted_resources)
+    print("notify_resources",notify_resources)
+    print("check_resources",check_resources)
 
 # Delete EC2 instances
 
@@ -146,9 +172,11 @@ def release_unassociated_eip(regions):
                     if dry_run == 'false':
                         response = ec2_specific_region.release_address(
                             AllocationId=allocation_id)
+                        deleted_resources.append(('ec2', allocation_id))
                 except Exception as e:
                     print(
                         f'[ERROR]: Failed to release address with allocation ID: {allocation_id}. Error: {e}')
+                    check_resources.append(('ec2', allocation_id))
 
 # Delete EBS volumes
 
@@ -197,9 +225,11 @@ def delete_available_ebs_volumes(regions):
                         if dry_run == 'false':
                             response = ec2_specific_region.delete_volume(
                                 VolumeId=volume_id)
+                            deleted_resources.append(('ec2', volume_id))
                     except Exception as e:
                         print(
                             f'[ERROR]: Failed to delete volume with ID: {volume_id}. Error: {e}')
+                        check_resources.append(('ec2', volume_id))
 
 # Delete empty load balancers
 
@@ -228,9 +258,11 @@ def delete_empty_load_balancers(regions):
                     if dry_run == 'false':
                         response = elb_specific_region.delete_load_balancer(
                             LoadBalancerName=lb_name)
+                        deleted_resources.append(('elb', lb_name))
                 except Exception as e:
                     print(
                         f'[ERROR]: Failed to delete classic load balancer: {lb_name}. Error: {e}')
+                    check_resources.append(('elb', lb_name))
 
 # Stop RDS instances
 
@@ -316,39 +348,72 @@ def scale_in_eks_nodegroups(regions):
                     print(
                         f'[ERROR]: Failed to update scaling config for node group {ng} in cluster {cluster}. Error: {e}')
 
-# Delete MSK streams - NEW
+
+# Delete Kinesis Streams
+def delete_kinesis_stream(regions):
+    """Delete Kinesis stream
+
+    :param regions: List of AWS region names
+    """
+
+    print("====== Kinesis Streams ======")
+    for region in regions:
+        print(
+            f'[INFO]: Getting all Kinesis streams in the region: {region}')
+        kinesis_client = boto3.client(
+            'kinesis', region_name='{}'.format(region))
+        response = kinesis_client.list_streams()
+
+        for streamName in response['StreamNames']:
+            try:
+                if streamName.startswith("upsolver_"):
+                    print(f'[INFO]: Skipped deleting Stream: {streamName}')
+                    notify_resources.append(("kinesis", streamName))
+                else:
+                    print(f'[INFO]: Deleting Stream: {streamName}')
+                    del_response = kinesis_client.delete_stream(  # debug # check if deletion by version is req
+                        StreamName=streamName,
+                        EnforceConsumerDeletion=True
+                    )
+                    print(f"response from stream deletion: {del_response}")
+                    log_deleted_resources(del_response, "kinesis", streamName)
+            except Exception as e:
+                print(
+                    f'[ERROR]: Failed to delete kinesis stream: {streamName}. Error: {e}')
+                check_resources.append(("kinesis",streamName))
 
 
-def delete_mks_clusters(regions):
+# Delete MSK streams
+
+def delete_msk_clusters(regions):
     """Delete MSK clusters
 
 
     :param regions: List of AWS region names
     """
-
     print("====== MSK clusters ======")
     for region in regions:
         print(
             f'[INFO]: Getting all MSK clusters in the region: {region}')
-        msk_cluster = boto3.client(
-            'msk_cluster', region_name='{}'.format(region))
-        response = boto3.client.list_clusters(
-            ClusterNameFilter='*',
-            MaxResults=100,
-            NextToken='string'
-        )
-        for msk_cluster in response['ClusterArn']:
+        kafka_client = boto3.client(
+            'kafka', region_name='{}'.format(region))
+
+        response = kafka_client.list_clusters_v2()
+        for msk_cluster in response['ClusterInfoList']:
             try:
                 print(f'[INFO]: Deleting MSK cluster: {msk_cluster}'),
-                delete_cluster = response.client.delete_cluster(  # debug
-                    ClusterArn=msk_cluster.ClusterArn
+                del_response = kafka_client.delete_cluster(
+                    ClusterArn=msk_cluster['ClusterArn']
                 )
+                print(f"response from kafka deletion: {del_response}")
+                log_deleted_resources(del_response, "kafka", msk_cluster['ClusterArn'])
             except Exception as e:
                 print(
                     f'[ERROR]: Failed to delete MSK cluster: {msk_cluster}. Error: {e}')
+                check_resources.append(("kafka", msk_cluster['ClusterArn']))
 
-# Delete OpenSearch  domains - NEW
 
+# Delete OpenSearch  domains
 
 def delete_domain(regions):
     """Delete OpenSearch domains
@@ -361,22 +426,23 @@ def delete_domain(regions):
     for region in regions:
         print(
             f'[INFO]: Getting all OpenSearch domains in the region: {region}')
-        response = boto3.client.list_domain_names(
-            EngineType='OpenSearch' | 'Elasticsearch'
-        )
-        for DomainName in response['DomainNames']:
+        domain_client = boto3.client('opensearch', region_name='{}'.format(region))
+        response = domain_client.list_domain_names(EngineType='OpenSearch')
+        for domain_name in response['DomainNames']:
             try:
-                print(f'[INFO]: Deleting OpenSearch domains: {DomainName}'),
-                delete_domain = response.client.delete_domain(  # debug
-                    DomainName='DomainNames'
+                print(f'[INFO]: Deleting OpenSearch domains: {domain_name}'),
+                delete_response = domain_client.delete_domain(
+                    DomainName=domain_name['DomainName']
                 )
+                print(f"response from domain deletion: {delete_response}")
+                log_deleted_resources(delete_response, "opensearch", domain_name['DomainName'])
             except Exception as e:
                 print(
-                    f'[ERROR]: Failed to delete OpenSearch domains: {DomainName}. Error: {e}')
+                    f'[ERROR]: Failed to delete OpenSearch domains: {domain_name}. Error: {e}')
+                check_resources.append(("opensearch", domain_name['DomainName']))
 
 
 # Delete CreatedOn tag
-
 
 def add_created_on_tag(regions):
     """Add "CreatedOn" tag on resources
@@ -453,10 +519,12 @@ def lambda_handler(event, context):
     delete_empty_load_balancers(regions)
     stop_rds(regions)
     scale_in_eks_nodegroups(regions)
-    delete_mks_clusters(regions)
+    delete_kinesis_stream(regions)
+    delete_msk_clusters(regions)
     delete_domain(regions)
 
     return {
         'statusCode': 200,
         'body': json.dumps('Success!')
     }
+
