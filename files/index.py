@@ -6,9 +6,6 @@ import os
 
 from send_mail import send_email
 
-# import dotenv
-# dotenv.load_dotenv()
-
 keep_instances = ['IGNORE']
 keep_tag_key = os.environ['KEEP_TAG_KEY']
 dry_run = os.environ['DRY_RUN']
