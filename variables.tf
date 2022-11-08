@@ -35,13 +35,13 @@ variable "function_description" {
 variable "function_timeout" {
   type        = number
   description = "The amount of time your Lambda Function has to run in seconds"
-  default     = 60 #TODO change to handle all operations
+  default     = 60
 }
 
 variable "dry_run" {
   type        = bool
   description = "Whether to run the Lambda in dry-run mode"
-  default     = false
+  default     = true
 }
 
 variable "check_all_regions" {
@@ -70,4 +70,22 @@ variable "event_cron" {
   type        = string
   description = "Cron value for the EventBridge rule"
   default     = "cron(0 23 * * ? *)"
+}
+
+variable "iam_policy" {
+  type        = string
+  description = "IAM policy name for ses"
+  default     = "SES_email_policy"
+}
+
+variable "email_identity" {
+  type        = string
+  description = "email identity to send mail"
+  default     = "er.sksumit1@gmail.com"
+}
+
+variable "to_address" {
+  type        = string
+  description = "to email address"
+  default     = "er.sksumit1@gmail.com"
 }

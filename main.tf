@@ -22,6 +22,8 @@ module "lambda_function" {
     CHECK_ALL_REGIONS = var.check_all_regions
     KEEP_TAG_KEY      = var.keep_tag_key["auto-deletion"]
     DRY_RUN           = var.dry_run
+    EMAIL_IDENTITY    = var.email_identity
+    TO_ADDRESS        = var.to_address
   }
 
   allowed_triggers = {
