@@ -11,6 +11,7 @@ def send_email(from_address, to_address, deleted_resources, skip_delete_resource
     if verified:
         html_body = get_email_body(deleted_resources, skip_delete_resources, notify_resources, check_resources)
         send_html_email(from_address, to_address, subject, html_body)
+        print("Email sent successfully")
     else:
         print("Warn: Sending email notification failed as Email address is not verified yet")
 
