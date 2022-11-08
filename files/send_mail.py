@@ -5,7 +5,7 @@ CHARSET = "UTF-8"
 table_header = ('service', 'Resource ID')
 
 def send_email(from_address, to_address, deleted_resources, skip_delete_resources, notify_resources, check_resources):
-    subject = "my Auto clean resource data"
+    subject = "AWS: Auto clean resource data"
     verified = verify_email_identity(from_address)
 
     if verified:
