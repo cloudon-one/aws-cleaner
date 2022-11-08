@@ -89,7 +89,7 @@ def verify_email_identity(email_address):
         return True
 
     response = ses_client.verify_email_identity(
-        EmailAddress="er.sksumit1@gmail.com"
+        EmailAddress=email_address
     )
     print("email verification response", response)
 
