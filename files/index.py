@@ -1,12 +1,20 @@
 import json
-from urllib import response
+# from urllib import response
 import boto3
 import os
-from aws_lambda_powertools import Logger
+# from aws_lambda_powertools import Logger
+
+from send_mail import send_email
+
+# import dotenv
+# dotenv.load_dotenv()
 
 keep_instances = ['IGNORE']
 keep_tag_key = os.environ['KEEP_TAG_KEY']
 dry_run = os.environ['DRY_RUN']
+from_address = os.environ['EMAIL_IDENTITY']
+to_address = os.environ['TO_ADDRESS']
+
 
 USED_REGIONS = [
     'us-east-1',
@@ -18,6 +26,7 @@ USED_REGIONS = [
 ]
 
 deleted_resources = []
+skip_delete_resources = []
 notify_resources = []
 check_resources = []
 
@@ -52,10 +61,13 @@ def log_deleted_resources(response, service, resource_id):
 
 
 
-def print_mail_data():
-    print("deleted_resources",deleted_resources)
-    print("notify_resources",notify_resources)
-    print("check_resources",check_resources)
+def notify_auto_clean_data():
+    print("deleted resources", deleted_resources)
+    print("notify resources", notify_resources)
+    print("check resources", check_resources)
+    print("skip delete resources", skip_delete_resources)
+
+    send_email(from_address, to_address, deleted_resources, skip_delete_resources, notify_resources, check_resources)
 
 # Delete EC2 instances
 
@@ -91,10 +103,10 @@ def stop_all_instances(regions):
                             for tag in instance["Tags"]:
                                 if tag["Key"] == keep_tag_key:
                                     keep_instances.append(instance_id)
-                                if tag["auto-deletion"] == "skip-resource":
+                                if tag.get("auto-deletion") == "skip-resource":
                                     instance_name = tag["Value"]
-                                if tag["auto-deletion"] == "skip-notify":
-                                    # if tag["auto-deletion"] == "stop-resource":
+                                if tag.get("auto-deletion")  == "skip-notify":
+                                    # if tag.get("auto-deletion")  == "stop-resource":
 
                                     instance_project = tag["Value"]
                         if state == "running" and instance_name not in keep_instances and instance_id not in keep_instances:
@@ -173,6 +185,8 @@ def release_unassociated_eip(regions):
                         response = ec2_specific_region.release_address(
                             AllocationId=allocation_id)
                         deleted_resources.append(('ec2', allocation_id))
+                    else:
+                        skip_delete_resources.append(('ec2', allocation_id))
                 except Exception as e:
                     print(
                         f'[ERROR]: Failed to release address with allocation ID: {allocation_id}. Error: {e}')
@@ -226,6 +240,8 @@ def delete_available_ebs_volumes(regions):
                             response = ec2_specific_region.delete_volume(
                                 VolumeId=volume_id)
                             deleted_resources.append(('ec2', volume_id))
+                        else:
+                            skip_delete_resources.append(('ec2', volume_id))
                     except Exception as e:
                         print(
                             f'[ERROR]: Failed to delete volume with ID: {volume_id}. Error: {e}')
@@ -259,6 +275,8 @@ def delete_empty_load_balancers(regions):
                         response = elb_specific_region.delete_load_balancer(
                             LoadBalancerName=lb_name)
                         deleted_resources.append(('elb', lb_name))
+                    else:
+                        skip_delete_resources.append(('elb', lb_name))
                 except Exception as e:
                     print(
                         f'[ERROR]: Failed to delete classic load balancer: {lb_name}. Error: {e}')
@@ -370,13 +388,16 @@ def delete_kinesis_stream(regions):
                     print(f'[INFO]: Skipped deleting Stream: {streamName}')
                     notify_resources.append(("kinesis", streamName))
                 else:
-                    print(f'[INFO]: Deleting Stream: {streamName}')
-                    del_response = kinesis_client.delete_stream(  # debug # check if deletion by version is req
-                        StreamName=streamName,
-                        EnforceConsumerDeletion=True
-                    )
-                    print(f"response from stream deletion: {del_response}")
-                    log_deleted_resources(del_response, "kinesis", streamName)
+                    if dry_run == 'false':
+                        print(f'[INFO]: Deleting Stream: {streamName}')
+                        del_response = kinesis_client.delete_stream(  # debug # check if deletion by version is req
+                            StreamName=streamName,
+                            EnforceConsumerDeletion=True
+                        )
+                        print(f"response from stream deletion: {del_response}")
+                        log_deleted_resources(del_response, "kinesis", streamName)
+                    else:
+                        skip_delete_resources.append(("kinesis", streamName))
             except Exception as e:
                 print(
                     f'[ERROR]: Failed to delete kinesis stream: {streamName}. Error: {e}')
@@ -401,12 +422,15 @@ def delete_msk_clusters(regions):
         response = kafka_client.list_clusters_v2()
         for msk_cluster in response['ClusterInfoList']:
             try:
-                print(f'[INFO]: Deleting MSK cluster: {msk_cluster}'),
-                del_response = kafka_client.delete_cluster(
-                    ClusterArn=msk_cluster['ClusterArn']
-                )
-                print(f"response from kafka deletion: {del_response}")
-                log_deleted_resources(del_response, "kafka", msk_cluster['ClusterArn'])
+                if dry_run == 'false':
+                    print(f'[INFO]: Deleting MSK cluster: {msk_cluster}'),
+                    del_response = kafka_client.delete_cluster(
+                        ClusterArn=msk_cluster['ClusterArn']
+                    )
+                    print(f"response from kafka deletion: {del_response}")
+                    log_deleted_resources(del_response, "kafka", msk_cluster['ClusterArn'])
+                else:
+                    skip_delete_resources.append(("kafka", msk_cluster['ClusterArn']))
             except Exception as e:
                 print(
                     f'[ERROR]: Failed to delete MSK cluster: {msk_cluster}. Error: {e}')
@@ -430,12 +454,15 @@ def delete_domain(regions):
         response = domain_client.list_domain_names(EngineType='OpenSearch')
         for domain_name in response['DomainNames']:
             try:
-                print(f'[INFO]: Deleting OpenSearch domains: {domain_name}'),
-                delete_response = domain_client.delete_domain(
-                    DomainName=domain_name['DomainName']
-                )
-                print(f"response from domain deletion: {delete_response}")
-                log_deleted_resources(delete_response, "opensearch", domain_name['DomainName'])
+                if dry_run == 'false':
+                    print(f'[INFO]: Deleting OpenSearch domains: {domain_name}'),
+                    delete_response = domain_client.delete_domain(
+                        DomainName=domain_name['DomainName']
+                    )
+                    print(f"response from domain deletion: {delete_response}")
+                    log_deleted_resources(delete_response, "opensearch", domain_name['DomainName'])
+                else:
+                    skip_delete_resources.append(("opensearch", domain_name['DomainName']))
             except Exception as e:
                 print(
                     f'[ERROR]: Failed to delete OpenSearch domains: {domain_name}. Error: {e}')
@@ -522,6 +549,7 @@ def lambda_handler(event, context):
     delete_kinesis_stream(regions)
     delete_msk_clusters(regions)
     delete_domain(regions)
+    notify_auto_clean_data()
 
     return {
         'statusCode': 200,

@@ -41,7 +41,7 @@ variable "function_timeout" {
 variable "dry_run" {
   type        = bool
   description = "Whether to run the Lambda in dry-run mode"
-  default     = false
+  default     = true
 }
 
 variable "check_all_regions" {
@@ -54,7 +54,7 @@ variable "keep_tag_key" {
   type        = map(string)
   description = "Key of the tag to configure as resoruces to keep"
   default = {
-    auto-deletion = "skip-resource",
+      "auto-deletion" = "skip-resource"
   }
 }
 
@@ -69,5 +69,23 @@ variable "ignore" {
 variable "event_cron" {
   type        = string
   description = "Cron value for the EventBridge rule"
-  default     = "cron(0 23 * * * *)"
+  default     = "cron(0 23 * * ? *)"
+}
+
+variable "iam_policy" {
+  type        = string
+  description = "IAM policy name for ses"
+  default     = "SES_email_policy"
+}
+
+variable "email_identity" {
+  type        = string
+  description = "email identity to send mail"
+  default     = "er.sksumit1@gmail.com"
+}
+
+variable "to_address" {
+  type        = string
+  description = "to email address"
+  default     = "er.sksumit1@gmail.com"
 }
