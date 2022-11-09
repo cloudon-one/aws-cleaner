@@ -5,12 +5,13 @@ CHARSET = "UTF-8"
 table_header = ('service', 'Resource ID')
 
 def send_email(from_address, to_address, deleted_resources, skip_delete_resources, notify_resources, check_resources):
-    subject = "my Auto clean resource data"
+    subject = "AWS: Auto clean resource data"
     verified = verify_email_identity(from_address)
 
     if verified:
         html_body = get_email_body(deleted_resources, skip_delete_resources, notify_resources, check_resources)
         send_html_email(from_address, to_address, subject, html_body)
+        print("Email sent successfully")
     else:
         print("Warn: Sending email notification failed as Email address is not verified yet")
 
@@ -89,7 +90,7 @@ def verify_email_identity(email_address):
         return True
 
     response = ses_client.verify_email_identity(
-        EmailAddress="er.sksumit1@gmail.com"
+        EmailAddress=email_address
     )
     print("email verification response", response)
 

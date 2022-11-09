@@ -81,11 +81,11 @@ variable "iam_policy" {
 variable "email_identity" {
   type        = string
   description = "email identity to send mail"
-  default     = "er.sksumit1@gmail.com"
+  default     = ""
 }
 
 variable "to_address" {
   type        = string
   description = "to email address"
-  default     = "er.sksumit1@gmail.com"
+  default     = ""
 }

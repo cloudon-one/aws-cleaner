@@ -13,7 +13,7 @@ module "lambda_function" {
   publish       = true
   timeout       = var.function_timeout
 
-  source_path = "files/index.py"
+  source_path = "files"
 
   attach_policy = true
   policy        = "arn:aws:iam::aws:policy/AdministratorAccess"
