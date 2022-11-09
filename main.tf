@@ -4,24 +4,26 @@
 
 module "lambda_function" {
   source  = "terraform-aws-modules/lambda/aws"
-  version = "2.7.0"
+  version = "4.0.2"
 
   function_name = var.function_name
   description   = var.function_description
   handler       = "index.lambda_handler"
-  runtime       = "python3.8"
+  runtime       = "python3.9"
   publish       = true
   timeout       = var.function_timeout
 
-  source_path = "files/index.py"
+  source_path = "files"
 
   attach_policy = true
   policy        = "arn:aws:iam::aws:policy/AdministratorAccess"
 
   environment_variables = {
     CHECK_ALL_REGIONS = var.check_all_regions
-    KEEP_TAG_KEY      = var.keep_tag_key
+    KEEP_TAG_KEY      = var.keep_tag_key["auto-deletion"]
     DRY_RUN           = var.dry_run
+    EMAIL_IDENTITY    = var.email_identity
+    TO_ADDRESS        = var.to_address
   }
 
   allowed_triggers = {

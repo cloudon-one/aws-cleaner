@@ -14,9 +14,9 @@ variable "default_tags" {
   type        = map(string)
   description = "Tags to apply across all resources handled by this provider"
   default = {
-    Terraform       = "True"
-    Terraform_Cloud = "True"
-    Owner           = "Daniel Vaknin"
+    Terraform = "True"
+    #Terraform_Cloud = "True"
+    #Owner           = "Daniel Vaknin"
   }
 }
 
@@ -41,7 +41,7 @@ variable "function_timeout" {
 variable "dry_run" {
   type        = bool
   description = "Whether to run the Lambda in dry-run mode"
-  default     = false
+  default     = true
 }
 
 variable "check_all_regions" {
@@ -51,13 +51,41 @@ variable "check_all_regions" {
 }
 
 variable "keep_tag_key" {
-  type        = string
+  type        = map(string)
   description = "Key of the tag to configure as resoruces to keep"
-  default     = "Keep"
+  default = {
+      "auto-deletion" = "skip-resource"
+  }
+}
+
+variable "ignore" {
+  type        = map(string)
+  description = "Key of the tag to configure as resoruces to skip"
+  default = {
+    spotinst = "*",
+  }
 }
 
 variable "event_cron" {
   type        = string
   description = "Cron value for the EventBridge rule"
-  default     = "cron(0 20 * * ? *)"
+  default     = "cron(0 23 * * ? *)"
+}
+
+variable "iam_policy" {
+  type        = string
+  description = "IAM policy name for ses"
+  default     = "SES_email_policy"
+}
+
+variable "email_identity" {
+  type        = string
+  description = "email identity to send mail"
+  default     = ""
+}
+
+variable "to_address" {
+  type        = string
+  description = "to email address"
+  default     = ""
 }
