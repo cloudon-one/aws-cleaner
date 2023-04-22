@@ -1,6 +1,7 @@
 .idea/
 .terraform/
 .terragrunt-cache/
+.vscode/
 .terraform.lock.hcl
 credentials.json
 .DS_Store
@@ -9,9 +10,4 @@ private.key
 cert.pem
 key.pem
 terraform.plan
-admin/budget/cred/billins-sa.json
-admin/budget/cred/billing-sa.json
-builds/a71e3b96e419186d8bf4ddb8dd9de68f14befe9176374dabad7cabbcd7eee0c9.plan.json
-
-builds/c233280998fc1c8c71d114c545061482df29ff468f9f44d4ac48f09488966ecf.plan.json
-workspace.code-workspace
+.code-workspace
