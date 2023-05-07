@@ -360,44 +360,51 @@ def stop_rds(regions):
 # Delete EKS nodegroups
 
 import boto3
+import logging
 from concurrent.futures import ThreadPoolExecutor
 
-def scale_in_eks_nodegroups(regions):
+logging.basicConfig(level=logging.INFO)
+
+def scale_in_eks_nodegroups(regions, dry_run=True):
     """Scales-in EKS nodegroups to 0
 
     This will ensure all EKS node groups have 0 replicas in all the regions in the input
 
     :param regions: List of AWS region names
+    :param dry_run: Boolean flag that indicates whether the operation should be performed as a dry run
     """
 
-    print("====== EKS node groups ======")
-
     def scale_in_eks_nodegroups_in_region(region):
-        print(f'[INFO]: Getting EKS clusters in region: {region}')
+        logger = logging.getLogger(f'{__name__}.{region}')
+
+        logger.info(f'Getting EKS clusters in region {region}')
         eks_specific_region = boto3.client('eks', region_name=region)
         response_clusters = eks_specific_region.list_clusters()
+
         for cluster in response_clusters['clusters']:
-            response_nodegroups = eks_specific_region.list_nodegroups(
-                clusterName=cluster)
+            response_nodegroups = eks_specific_region.list_nodegroups(clusterName=cluster)
             for ng in response_nodegroups['nodegroups']:
                 node_group_info = eks_specific_region.describe_nodegroup(
                     clusterName=cluster, nodegroupName=ng)
-                scalingConfig = node_group_info['nodegroup']['scalingConfig']
+                scaling_config = node_group_info['nodegroup']['scalingConfig']
 
                 # Update scaling
-                scalingConfig['minSize'] = 0
-                scalingConfig['desiredSize'] = 0
+                scaling_config['minSize'] = 0
+                scaling_config['desiredSize'] = 0
 
-                try:
-                    print(f'[INFO]: Updating scaling config for node group {ng} in cluster {cluster}')
-                    if dry_run == 'false':
-                        response = eks_specific_region.update_nodegroup_config(clusterName=cluster, nodegroupName=ng, scalingConfig=scalingConfig)
-                except Exception as e:
-                    print(f'[ERROR]: Failed to update scaling config for node group {ng} in cluster {cluster}. Error: {e}')
+                logger.info(f'Updating scaling config for node group {ng} in cluster {cluster}')
+                if not dry_run:
+                    try:
+                        response = eks_specific_region.update_nodegroup_config(
+                            clusterName=cluster, nodegroupName=ng,
+                            scalingConfig=scaling_config)
+                    except Exception as e:
+                        logger.error(f'Failed to update scaling config for node group {ng} in cluster {cluster}. Error: {e}')
 
     with ThreadPoolExecutor(max_workers=5) as executor:
         for region in regions:
             executor.submit(scale_in_eks_nodegroups_in_region, region)
+
 
 # Delete Kinesis Streams
 def delete_kinesis_stream(regions):
