@@ -1,5 +1,6 @@
 # AWS - Nightly Clean
 
+![aws-cleaner-hld](https://github.com/cloudon-one/aws-cleaner/blob/main/image_original.jpeg)
 This repository contains a Terraform module that will deploy the relevant resources to perform a nightly cleanup of an AWS account (from unused resources)
 
 ## Requirements
